@@ -4,6 +4,7 @@ from selenium.webdriver.common.by import By
 from bs4 import BeautifulSoup
 import pandas as pd
 from time import sleep
+from course import Course
 
 def get_text_from_row(row: WebElement, err_depth=0, max_err_depth=3):
   # print("processing row", row)
@@ -59,7 +60,7 @@ def extract_page_courses(driver: webdriver.Chrome):
     # print(textdiv.text)
   return classContents
 
-
+USE_CSV = True
 if __name__ == "__main__":
   # find elem table.table_default
   # table rows will be course names with anchor tags that load course info
@@ -74,13 +75,23 @@ if __name__ == "__main__":
   # Course name structured as - DEPT #### Course Name (#)
   # first #### indicates course #, second indicates # hrs
 
-  # Need to install chromium driver and add to path for this
-  driver = webdriver.Chrome()
+  if USE_CSV:
+    df = pd.read_csv('coursedata.csv')
+    print(df)
+  else: 
+    # Need to install chromium driver and add to path for this
+    driver = webdriver.Chrome()
 
-  # General Catalog 2022-23
-  driver.get("https://catalog.lsu.edu/content.php?catoid=25&navoid=2277")
+    # General Catalog 2022-23
+    driver.get("https://catalog.lsu.edu/content.php?catoid=25&navoid=2277")
 
-  courseTexts = extract_page_courses(driver)
+    courseTexts = extract_page_courses(driver)
+    ctdf = pd.DataFrame(courseTexts)
+    ctdf.to_csv('coursedata.csv')
+
+    courses = [Course(text) for text in courseTexts]
+
+  # TODO - also extract actual names of prefixes
 
   # for e in elem: print(e.text)
   # content = driver.page_source
