@@ -86,17 +86,13 @@ if __name__ == "__main__":
     driver.get("https://catalog.lsu.edu/content.php?catoid=25&navoid=2277")
 
     courseTexts = extract_page_courses(driver)
+
+    driver.close()
+    driver.quit()
+
     ctdf = pd.DataFrame(courseTexts)
     ctdf.to_csv('coursedata.csv')
 
     courses = [Course(text) for text in courseTexts]
 
-  # TODO - also extract actual names of prefixes
-
-  # for e in elem: print(e.text)
-  # content = driver.page_source
-  # soup = BeautifulSoup(content)
-  # data = soup.find("table", {"class": "table_default"})
-  # print(data.prettify())
-  driver.close()
-  driver.quit()
+  # TODO - also extract actual names of prefixes maybes
