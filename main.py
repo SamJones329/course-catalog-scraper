@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
   if USE_CSV:
     df = pd.read_csv('coursedata.csv')
-    print(df)
+    coursetexts = df['coursetext'].values.tolist()
   else: 
     # Need to install chromium driver and add to path for this
     driver = webdriver.Chrome()
@@ -85,14 +85,14 @@ if __name__ == "__main__":
     # General Catalog 2022-23
     driver.get("https://catalog.lsu.edu/content.php?catoid=25&navoid=2277")
 
-    courseTexts = extract_page_courses(driver)
+    coursetexts = extract_page_courses(driver)
 
     driver.close()
     driver.quit()
 
-    ctdf = pd.DataFrame(courseTexts)
+    ctdf = pd.DataFrame(coursetexts, columns=['coursetext'])
     ctdf.to_csv('coursedata.csv')
 
-    courses = [Course(text) for text in courseTexts]
+  courses = [Course(text) for text in coursetexts]
 
   # TODO - also extract actual names of prefixes maybes

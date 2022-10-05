@@ -43,10 +43,10 @@ class Course:
     match = re.search("\.", desc).span()
     reqs = desc[0:match[0]] # remove period
     desc = desc[match[1]+1:] # remove space after period
-    match = re.match("grade of \"[A-DF]\" or better in [A-Z]{2,4} \d{4}", reqs)
-    if match:
-      match = match.span()
-      print(reqs[match[0]:match[1]])
+    # print(reqs)
+    matches = re.findall("[A-Z]{2,4} \d{4}", reqs)
+    print(f"prereqs: {matches}")
+
 
     # reqs = reqs.split('or')
 
@@ -63,5 +63,5 @@ class Course:
     return f"{self.dept} {self.num}"
 
 if __name__ == "__main__":
-  test_str = 'ACCT 2000 Survey of Accounting (3)\nPrereq.: MATH 1021 or MATH 1029 or equivalent. Credit will not be given for both this course and ACCT 2001 or ACCT 2002. Students in nonbusiness curricula are advised to enroll in ACCT 2000 if they are given the option of ACCT 2000 or ACCT 2001, unless they plan to pursue a business degree at a subsequent date. All students in the E. J. Ourso College of Business are required to take ACCT 2001. Introduction to the meaning of the values presented in financial statements; management accounting concepts and internal decision making; fundamentals of individual income taxes.'
+  test_str = "ACCT 3001 Intermediate Accounting–Part I (3)\nAn honors course, ACCT 3002, is also available. Prereq.: grade of “C” or above in ACCT 2101; MATH 1431. Only Accounting and Finance students admitted to the College of Business or permission of department. Credit will not be given for both this course and ACCT 3002 or ACCT 7011. Accounting principles underlying preparation of financial statements; their application in measurement and reporting of selected balance-sheet items and related revenue and expense recognition."
   course = Course(test_str)
