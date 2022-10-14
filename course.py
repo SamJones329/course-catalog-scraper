@@ -1,17 +1,11 @@
 import re
 
-class CourseShort:
-  def __init__(self, dept: str, num: int):
-    self.dept = dept
-    self.num = num
-
 class Course:
   dept: str
   num: int
   name: str
   desc: str
-  prereqs: list[CourseShort]
-  coreqs: list[CourseShort]
+  reqs: str
 
   def __init__(self, text):
     textparts = text.split('\n')
@@ -19,23 +13,24 @@ class Course:
     body = textparts[1]
 
     # get department
-    match = re.search("[A-Z]{2,4}", title)
+    match = re.search(r"[A-Z]{2,4}", title)
     match = match.span()
     self.dept = text[match[0]:match[1]]
 
     # get course number
-    match = re.search("\d{4}", title)
+    match = re.search(r"\d{4}", title)
     match = match.span()
     self.num = int(text[match[0]:match[1]])
 
     # get course name
-    match = re.search("(?<=\d{4}\s).*(?=\s\()", title)
+    match = re.search(r"(?<=\d{4}\s).*(?=\s\()", title)
     match = match.span()
     self.name = text[match[0]:match[1]]
 
     # get reqs
-    match = re.search("(?<=Prereq\.:).*\.", body)
+    match = re.search(r"(?<=Prereq\.:).*\.", body)
     if not match:
+      # print(f"{self.dept}{self.num} prereqs: N/A")
       self.desc = body
       return
     match = match.span()
@@ -43,10 +38,19 @@ class Course:
     match = re.search("\.", desc).span()
     reqs = desc[0:match[0]] # remove period
     desc = desc[match[1]+1:] # remove space after period
-    # print(reqs)
-    matches = re.findall("[A-Z]{2,4} \d{4}", reqs)
-    print(f"prereqs: {matches}")
+    self.desc = desc
+    self.reqs = reqs
 
+    
+    # reqs = re.sub(
+    #   r'grade of (“[A-DF]”)\s?or (?:above|better)', r'\1', 
+    #   reqs)
+    # splitreqs = re.split(';|,', reqs)
+    # print(splitreqs)
+
+    # matches = re.findall("[A-Z]{2,4} \d{4}", reqs)
+    # print(f"{self.dept}{self.num} prereqs: {matches}")
+    # if not matches: print(reqs)
 
     # reqs = reqs.split('or')
 
