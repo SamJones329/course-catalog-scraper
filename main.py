@@ -1,9 +1,8 @@
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
-from bs4 import BeautifulSoup
 import pandas as pd
-from time import sleep
+from time import sleep, perf_counter
 from course import Course
 
 def get_text_from_row(row: WebElement, err_depth=0, max_err_depth=3):
@@ -23,6 +22,7 @@ def get_text_from_row(row: WebElement, err_depth=0, max_err_depth=3):
     return get_text_from_row(row, err_depth+1)
 
 def extract_page_courses(driver: webdriver.Chrome):
+  
   # table containing class info has class table_default
   elems = driver.find_elements(By.CLASS_NAME, "table_default")
 
@@ -34,6 +34,16 @@ def extract_page_courses(driver: webdriver.Chrome):
 
   # extract page nav (last row)
   pagenavrow = rows[-1]
+
+  # get page num and next page and print progress
+  curpage = pagenavrow.find_element(By.CSS_SELECTOR, 'span[aria-current=page]')
+  try:
+    lastpage = pagenavrow.find_element(By.CSS_SELECTOR, 'a:last-child')
+    nextpage = pagenavrow.find_element(By.CSS_SELECTOR, 'span[aria-current=page]+a')
+  except Exception:
+    lastpage = curpage
+    nextpage = None
+  print(f"Processing page {curpage.text}/{lastpage.text}...")
 
   # remove page nav from rows
   rows = rows[:-1]
@@ -51,16 +61,19 @@ def extract_page_courses(driver: webdriver.Chrome):
   # extract text info to parse for each class
   classContents = []
   for row in rows:
-    # print(row)
     classContents.append(get_text_from_row(row))
-    # textdiv = row.find_element(
-    #   By.CSS_SELECTOR, 
-    #   'td>div:nth-child(2)')
-    # classContents.append(textdiv.text)
-    # print(textdiv.text)
-  return classContents
+  
+  more_pages = False
+  if nextpage:
+    more_pages = True
+    nextpage.click()
+    sleep(5) # sleep for 5 seconds to let page load
+
+  return more_pages, classContents
 
 USE_CSV = True
+RAW_DATA_FILE = 'rawcoursedata.csv'
+PROC_DATA_FILE = 'coursedata.csv'
 if __name__ == "__main__":
   # find elem table.table_default
   # table rows will be course names with anchor tags that load course info
@@ -75,24 +88,69 @@ if __name__ == "__main__":
   # Course name structured as - DEPT #### Course Name (#)
   # first #### indicates course #, second indicates # hrs
 
+  start = perf_counter()
+  print()
   if USE_CSV:
-    df = pd.read_csv('coursedata.csv')
+    print('Reading raw data from csv...')
+    df = pd.read_csv(RAW_DATA_FILE)
     coursetexts = df['coursetext'].values.tolist()
   else: 
     # Need to install chromium driver and add to path for this
+    print('Starting driver...')
     driver = webdriver.Chrome()
 
+    # set implicit wait time
+    driver.implicitly_wait(1)
+
     # General Catalog 2022-23
+    print('Opening course catalog...')
     driver.get("https://catalog.lsu.edu/content.php?catoid=25&navoid=2277")
 
-    coursetexts = extract_page_courses(driver)
+    print('Extracting course data...')
+    coursetexts = []
+    is_more_pages = True
+    while is_more_pages:
+      is_more_pages, page_courses = extract_page_courses(driver)
+      coursetexts += page_courses
 
+    print('Closing driver...')
     driver.close()
     driver.quit()
 
+    print('Writing raw data...')
     ctdf = pd.DataFrame(coursetexts, columns=['coursetext'])
-    ctdf.to_csv('coursedata.csv')
+    ctdf.to_csv(RAW_DATA_FILE)
+
+  print('Processing raw data...')
+  badelems = []
+  for idx, text in enumerate(coursetexts):
+    if type(text) != str:
+      badelems.append(idx)
+      print(f'Found non string value: {text}; is probably the general reqs listed for all CHE classes')
+
+  badelems = list(reversed(badelems))
+  for elem in badelems:
+    if elem == 0:
+      coursetexts = coursetexts[elem+1]
+    elif elem == len(coursetexts) - 1:
+      coursetexts = coursetexts[:elem]
+    else:
+      coursetexts = coursetexts[:elem] + coursetexts[elem+1:]
 
   courses = [Course(text) for text in coursetexts]
 
+  print('Writing processed data...')
+  courses = [
+    [course.dept, course.num, course.name, course.desc, course.reqs] 
+    for course in courses]
+  courses = pd.DataFrame(data=courses, columns=['Dept', 'Num', 'Name', 'Desc', 'Reqs'])
+  courses.to_csv(PROC_DATA_FILE)
+
+  print('Done! Processed data can be found in coursedata.csv')
+
+  end = perf_counter()
+  duration = end - start
+  minutes = int(duration // 60)
+  seconds = duration % 60
+  print(f"Finished in {minutes} minutes and {seconds:.2f} seconds\n")
   # TODO - also extract actual names of prefixes maybes
